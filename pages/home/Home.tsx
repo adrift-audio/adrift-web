@@ -1,7 +1,8 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import WebTorrent from 'webtorrent';
 
-// import decodeLink from '../../utilities/decode-link';
+import decodeLink from '../../utilities/decode-link';
 import log from '../../utilities/log';
 import { SOCKET_EVENTS } from '../../constants';
 import useRefState from '../../hooks/use-ref-state';
@@ -9,13 +10,24 @@ import { WEBSOCKETS_URL } from '../../configuration';
 
 function Home(): React.ReactElement {
   const [socketClient, setSocketClient] = useRefState<Socket>({} as Socket);
+  const [torrentClient, setTorrentClient] = useRefState<any>({} as any);
+  const [trackData, setTrackData] = useState('');
 
   const handleSwitchTrack = (event: any) => {
     log(event);
+    setTrackData(JSON.stringify(event.data.track));
+    torrentClient?.current?.add(decodeLink(event.data.link), (torrent) => {
+      torrent.files.forEach((file) => {
+        file.appendTo('body');
+      });
+    });
   };
 
   useEffect(
     () => {
+      const torrent = new WebTorrent();
+      setTorrentClient(torrent);
+
       const connection: Socket = io(
         WEBSOCKETS_URL,
         {
@@ -67,7 +79,7 @@ function Home(): React.ReactElement {
         onClick={handlePreviousClick}
         type="button"
       >
-        Next
+        Previous
       </button>
       <button
         onClick={handleNextClick}
@@ -75,6 +87,9 @@ function Home(): React.ReactElement {
       >
         Next
       </button>
+      <div>
+        { trackData }
+      </div>
     </>
   );
 }
